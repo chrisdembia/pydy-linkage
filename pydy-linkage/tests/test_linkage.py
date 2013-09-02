@@ -1,3 +1,4 @@
+from linkage import *
 from sympy import symbols
 from sympy.physics.mechanics import Point, ReferenceFrame, Dyadic, RigidBody
 from sympy.physics.mechanics import dynamicsymbols
@@ -20,14 +21,14 @@ def test_rrr_manipulator():
     link3 = link2.link_new('link3', RevoluteJoint('q3', TranslateX(L2)))
 
     N = sys.root.frame
-    sys.gravity_vector = -g * N.y
+    #sys.gravity_vector = -g * N.y
 
     print sys
-    print sys.coordinates
-    print sys.mass_matrix
-    print sys.state_derivatives
+    #print sys.coordinates
+    #print sys.mass_matrix
+    #print sys.state_derivatives
 
-
+"""
 def test_double_pendulum_on_cart():
     
     h = sys.constant_new('h', 'height of robot arm on cart')
@@ -145,3 +146,4 @@ kdd = KM.kindiffdict()
 rhs = rhs.subs(kdd)
 rhs.simplify()
 mprint(rhs)
+"""

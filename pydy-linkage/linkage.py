@@ -2,8 +2,11 @@ from __future__ import print_function, division
 
 from sympy import symbols
 from sympy.physics.mechanics.functions import inertia
+from sympy.physics.mechanics.essential import ReferenceFrame
+from sympy.physics.mechanics.point import Point
+from sympy.physics.mechanics import dynamicsymbols
 
-__all__ = ['Linkage']
+__all__ = ['Linkage', 'RevoluteJoint', 'TranslateX']
 
 class Linkage(object):
     """TODO
@@ -46,6 +49,7 @@ class RootLink(object):
         self._frame = ReferenceFrame('N')
         self._origin = Point('NO')
         self._origin.set_vel(self._frame, 0)
+        # TODO need to set_acc?
 
     def _get_name(self):
         return self._name
@@ -55,8 +59,12 @@ class RootLink(object):
         return self._frame
     frame = property(_get_frame)
 
+    def _get_origin(self):
+        return self._origin
+    origin = property(_get_origin)
+
     def link_new(self, name, joint):
-        self._children[name] = Link(name, joint, parent)
+        self._children[name] = Link(name, joint, self)
 
 
 class Link(RootLink):
@@ -74,20 +82,20 @@ class Link(RootLink):
         mass = symbols(name + '_mass')
         frame = ReferenceFrame(name + '_frame')
         self._origin = Point(name + '_origin')
-        joint.orient(name, parent.frame, parent.origin, frame, self._origin)
+        joint._orient(name, parent.frame, parent.origin, frame, self._origin)
 
         # All expressed in body frame.
         masscenter = self._origin.locatenew(name + '_masscenter',
                 symbols(name + '_mcx') * frame.x +
                 symbols(name + '_mcy') * frame.y +
                 symbols(name + '_mcz') * frame.z)
-        inertia = inertia(frame, 
-                symbols(name + '_ixx_central')
-                symbols(name + '_iyy_central')
-                symbols(name + '_izz_central')
-                symbols(name + '_ixy_central')
-                symbols(name + '_iyz_central')
-                symbols(name + '_izx_central'))
+        inertia = inertia(frame,
+                symbols(name + '_ixx'),
+                symbols(name + '_iyy'),
+                symbols(name + '_izz'),
+                symbols(name + '_ixy'),
+                symbols(name + '_iyz'),
+                symbols(name + '_izx'))
         # TODO allow specification of non-central inertia
         self._rigidbody = RigidBody(name + '_rigidbody',
                 masscenter, frame, mass, (inertia, masscenter))
@@ -98,10 +106,6 @@ class Link(RootLink):
 
     def _get_frame(self):
         return self._rigidbody.frame
-
-    def _get_origin(self):
-        return self._origin
-    origin = property(_get_origin)
 
     def _get_parent(self):
         return self._parent
@@ -114,7 +118,7 @@ class Joint(object):
     def __init__(self, transform=None):
         self._transform = transform
 
-    def orient(self, name, parent_frame, parent_origin,
+    def _orient(self, name, parent_frame, parent_origin,
             child_frame, child_origin):
         self._frame = ReferenceFrame(name + '_joint_frame')
         self._origin = Point(name + '_joint_origin')
@@ -122,12 +126,12 @@ class Joint(object):
             self._frame.orient(parent_frame, 'Body', [0, 0, 0], 'XYZ')
             self._origin.set_pos(parent_origin, 0)
         else:
-            self._transform.orient(parent_frame, parent_origin,
+            self._transform._orient(parent_frame, parent_origin,
                     self._frame, self._origin)
 
-        self.orient_child(child_frame, child_origin)
+        self._orient_child(child_frame, child_origin)
 
-    def _orient_child(frame, origin):
+    def _orient_child(self, frame, origin):
         raise NotImplementedError()
 
 
@@ -143,7 +147,7 @@ class RevoluteJoint(Joint):
         self._speeds = [dynamicsymbols('%s_u' % coordinate_name)]
         self._accelerations = [dynamicsymbols('%s_u' % coordinate_name, 1)]
 
-    def _orient_child(frame, origin):
+    def _orient_child(self, frame, origin):
         frame.orient(self._frame, 'Axis', [self._coordinates[0], self._frame.z])
         frame.set_ang_vel(self._frame, self._speeds[0] * self._frame.z)
         frame.set_ang_acc(self._frame, self._accelerations[0] * self._frame.z)
@@ -154,25 +158,25 @@ class RevoluteJoint(Joint):
 class StaticHomogeneousTransform(object):
     """TODO
     """
-    def orient(parent_frame, parent_origin, frame, origin):
-        self._orient(parent_frame, parent_origin, frame, origin)
+    def _orient(self, parent_frame, parent_origin, frame, origin):
+        self._orient_derived(parent_frame, parent_origin, frame, origin)
         frame.set_ang_vel(parent_frame, 0)
         frame.set_ang_acc(parent_frame, 0)
         origin.set_vel(parent_origin, 0)
         origin.set_acc(parent_origin, 0)
 
-    def _orient(parent_frame, parent_origin, frame, origin):
+    def _orient_derived(self, parent_frame, parent_origin, frame, origin):
         raise NotImplementedError()
 
 
-class TranslateX(Transform):
+class TranslateX(StaticHomogeneousTransform):
     """TODO
     """
     def __init__(self, dist):
         self._dist = dist
 
-    def _orient(parent_frame, parent_origin, frame, origin):
+    def _orient_derived(self, parent_frame, parent_origin, frame, origin):
+        self._frame.orient(parent_frame, 'Body', [0, 0, 0], 'XYZ')
         origin.set_pos(parent_origin, self._dist * parent_frame.x)
-        
 
 
