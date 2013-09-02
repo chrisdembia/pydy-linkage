@@ -19,13 +19,34 @@ def test_rrr_manipulator():
     link2 = link1.link_new('link2', RevoluteJoint('q2', TranslateX(L1)))
     link3 = link2.link_new('link3', RevoluteJoint('q3', TranslateX(L2)))
 
-    sys.gravity_vector = -g * sys.ground.frame
+    N = sys.root.frame
+    sys.gravity_vector = -g * N.y
 
     print sys
     print sys.coordinates
     print sys.mass_matrix
     print sys.state_derivatives
 
+
+def test_double_pendulum_on_cart():
+    
+    h = sys.constant_new('h', 'height of robot arm on cart')
+    L1 = sys.constant_new('L2', 'length of link 1')
+    
+    cart = sys.root.link_new('cart',
+            #PrismaticJoint('d1', 'z'))
+            PrismaticJoint('d1'))
+    link1 = cart.link_new('link1',
+            RevoluteJoint('theta2', TranslateX(-h)), axis='-y')
+    link2 = link1.link_new('link2',
+            RevoluteJoint('theta3', TranslateZ(L2)), axis='-y')
+            
+    link1 = cart.link_new('link1',
+            RevoluteJoint('theta2', RX(np.pi/2)*TX(-h), RX(-np.pi/2)))
+    link2 = link1.link_new('link2',
+            RevoluteJoint('theta3', RX(np.pi/2)*TZ(L2), RX(-np.pi/2)))
+    N = sys.root.frame
+    sys.gravity_vector = g * N.x
 
 def test_babyboot():
     sys = MultiBodySystem('babyboot')
