@@ -1,12 +1,13 @@
 from __future__ import print_function, division
 
-from sympy import symbols
-from sympy.physics.mechanics.functions import inertia
-from sympy.physics.mechanics.essential import ReferenceFrame
-from sympy.physics.mechanics.point import Point
-from sympy.physics.mechanics import dynamicsymbols
+import abc
 
-__all__ = ['Linkage', 'RevoluteJoint', 'TranslateX']
+from sympy import symbols
+from sympy.physics.mechanics import functions
+from sympy.physics.mechanics import dynamicsymbols
+from sympy.physics.mechanics import Point, ReferenceFrame, RigidBody
+
+__all__ = ['Linkage', 'RevoluteJoint', 'Identity', 'TranslateX']
 
 class Linkage(object):
     """TODO
@@ -37,6 +38,10 @@ class Linkage(object):
         self._kanes_method.kanes_equations(self._force_list, self._body_list)
         return self._kanes_method.mass_matrix
 
+    def _check_link_name(self):
+        # TODO
+        pass
+
 
 class RootLink(object):
     """TODO
@@ -64,7 +69,11 @@ class RootLink(object):
     origin = property(_get_origin)
 
     def link_new(self, name, joint):
+        # TODO walk the tree to ensure a link with this name does not exist.
         self._children[name] = Link(name, joint, self)
+        print('DEBUG %s' % name)
+        print('DEBUG %s' % joint._transform)
+        return self._children[name]
 
 
 class Link(RootLink):
@@ -89,7 +98,7 @@ class Link(RootLink):
                 symbols(name + '_mcx') * frame.x +
                 symbols(name + '_mcy') * frame.y +
                 symbols(name + '_mcz') * frame.z)
-        inertia = inertia(frame,
+        inertia = functions.inertia(frame,
                 symbols(name + '_ixx'),
                 symbols(name + '_iyy'),
                 symbols(name + '_izz'),
@@ -112,25 +121,64 @@ class Link(RootLink):
     parent = property(_get_parent)
 
 
+class StaticHomogeneousTransform(object):
+    """TODO
+    """
+
+    __metaclass__ = abc.ABCMeta
+
+    def _orient(self, parent_frame, parent_origin, frame, origin):
+        self._orient_derived(parent_frame, parent_origin, frame, origin)
+        frame.set_ang_vel(parent_frame, 0)
+        frame.set_ang_acc(parent_frame, 0)
+        origin.set_vel(frame, 0)
+        origin.set_acc(frame, 0)
+
+    @abc.abstractmethod
+    def _orient_derived(self, parent_frame, parent_origin, frame, origin):
+        raise NotImplementedError()
+
+
+class Identity(StaticHomogeneousTransform):
+    """TODO
+    """
+    def _orient_derived(self, parent_frame, parent_origin, frame, origin):
+        frame.orient(parent_frame, 'Body', [0, 0, 0], 'XYZ')
+        origin.set_pos(parent_origin, 0)
+
+
+class TranslateX(StaticHomogeneousTransform):
+    """TODO
+    """
+    def __init__(self, dist):
+        self._dist = dist
+
+    def _orient_derived(self, parent_frame, parent_origin, frame, origin):
+        frame.orient(parent_frame, 'Body', [0, 0, 0], 'XYZ')
+        print(self._dist)
+        print(parent_frame.x)
+        origin.set_pos(parent_origin, self._dist * parent_frame.x)
+
+
 class Joint(object):
     """TODO
     """
-    def __init__(self, transform=None):
+
+    __metaclass__ = abc.ABCMeta
+
+    def __init__(self, transform=Identity()):
         self._transform = transform
 
     def _orient(self, name, parent_frame, parent_origin,
             child_frame, child_origin):
         self._frame = ReferenceFrame(name + '_joint_frame')
         self._origin = Point(name + '_joint_origin')
-        if self._transform == None:
-            self._frame.orient(parent_frame, 'Body', [0, 0, 0], 'XYZ')
-            self._origin.set_pos(parent_origin, 0)
-        else:
-            self._transform._orient(parent_frame, parent_origin,
-                    self._frame, self._origin)
+        self._transform._orient(parent_frame, parent_origin,
+                self._frame, self._origin)
 
         self._orient_child(child_frame, child_origin)
 
+    @abc.abstractmethod
     def _orient_child(self, frame, origin):
         raise NotImplementedError()
 
@@ -153,30 +201,3 @@ class RevoluteJoint(Joint):
         frame.set_ang_acc(self._frame, self._accelerations[0] * self._frame.z)
         origin.set_pos(self._origin, 0)
         origin.v2pt_theory(self._origin, self._frame, frame)
-
-
-class StaticHomogeneousTransform(object):
-    """TODO
-    """
-    def _orient(self, parent_frame, parent_origin, frame, origin):
-        self._orient_derived(parent_frame, parent_origin, frame, origin)
-        frame.set_ang_vel(parent_frame, 0)
-        frame.set_ang_acc(parent_frame, 0)
-        origin.set_vel(parent_origin, 0)
-        origin.set_acc(parent_origin, 0)
-
-    def _orient_derived(self, parent_frame, parent_origin, frame, origin):
-        raise NotImplementedError()
-
-
-class TranslateX(StaticHomogeneousTransform):
-    """TODO
-    """
-    def __init__(self, dist):
-        self._dist = dist
-
-    def _orient_derived(self, parent_frame, parent_origin, frame, origin):
-        self._frame.orient(parent_frame, 'Body', [0, 0, 0], 'XYZ')
-        origin.set_pos(parent_origin, self._dist * parent_frame.x)
-
-
