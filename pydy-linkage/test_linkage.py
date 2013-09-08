@@ -3,6 +3,14 @@ from sympy import symbols
 from sympy.physics.mechanics import Point, ReferenceFrame, Dyadic, RigidBody
 from sympy.physics.mechanics import dynamicsymbols
 
+# TODO feedback on:
+# 1) hiding original getters and setters
+# 2) must call kanes_equations to get mass matrix??
+# 3) task 1: get it to produce state derivatives.
+# 4) task 2: comments.
+# 5) deleting links.
+# 6) two options for link_new interface.
+
 def test_rrr_manipulator():
     sys = Linkage('rrr_manipulator')
 
@@ -11,6 +19,7 @@ def test_rrr_manipulator():
 
     # Constants.
     # ----------
+    g = sys.constant_new('g', "acceleration due to gravity on Earth's surface")
     L1 = sys.constant_new('L1', 'length of link 1')
     L2 = sys.constant_new('L2', 'length of link 2')
 
@@ -20,12 +29,26 @@ def test_rrr_manipulator():
     link2 = link1.link_new('link2', RevoluteJoint('q2', TranslateX(L1)))
     link3 = link2.link_new('link3', RevoluteJoint('q3', TranslateX(L2)))
 
-    N = sys.root.frame
-    #sys.gravity_vector = -g * N.y
+#    sys.link_new('root', 'link1', RevoluteJoint('q1'))
+#    sys.link_new('link1', 'link2', RevoluteJoint('q2', TranslateX(L1)))
 
-    print sys
+    N = sys.root.frame
+    sys.gravity_vector = -g * N.y
+
+    print(sys)
+    # TODO calling this method multiple times concatenates the list upon itself.
+    print(sys.independent_coordinates())
+    assert str(sys.independent_coordinates()) == '[q1(t), q2(t), q3(t)]'
+    print(sys.independent_speeds())
+    assert str(sys.independent_speeds()) == '[q1_u(t), q2_u(t), q3_u(t)]'
+    print link1.joint.coordinatedots
+    print link1.joint.speeddots
+    print sys.kinematic_differential_equations() == (
+            '[-q1_u(t) + Derivative(q1(t), t), '
+            '-q2_u(t) + Derivative(q2(t), t), '
+            '-q3_u(t) + Derivative(q3(t), t)]')
     #print sys.coordinates
-    #print sys.mass_matrix
+    print(sys.mass_matrix())
     #print sys.state_derivatives
 
 """
