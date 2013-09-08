@@ -86,6 +86,8 @@ class Linkage(MultiBodySystem):
         self._forces.pop(name)
 
     def _manage_gravity_forces(self):
+        # TODO must modify to account for gravity_force being modified more
+        # than once.
         for body in self.body_list():
             self.force_new('%s_gravity', body.masscenter, body.mass * self.gravity_vector)
 

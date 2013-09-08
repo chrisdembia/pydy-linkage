@@ -48,7 +48,36 @@ def test_rrr_manipulator():
             '-q2_u(t) + Derivative(q2(t), t), '
             '-q3_u(t) + Derivative(q3(t), t)]')
     #print sys.coordinates
-    print(sys.mass_matrix())
+    M = sys.mass_matrix()
+    #print(sys.mass_matrix())
+    # TODO this formulation lets us see which L1's/L3's come from goemetry and which come from mass properties (center of mass)
+    M = M.subs({
+        'link1_ixx': 0,
+        'link1_iyy': 0,
+        'link1_izz': 0,
+        'link1_ixy': 0,
+        'link1_ixz': 0,
+        'link1_iyz': 0,
+        'link2_ixx': 0,
+        'link2_iyy': 0,
+        'link2_izz': 0,
+        'link2_ixy': 0,
+        'link2_ixz': 0,
+        'link2_iyz': 0,
+        'link3_ixx': 0,
+        'link3_iyy': 0,
+        'link3_izz': 0,
+        'link3_ixy': 0,
+        'link3_ixz': 0,
+        'link3_iyz': 0,
+        'link1_mcz': 0,
+        'link2_mcz': 0,
+        'link3_mcz': 0,
+        'link1_mcy': 0,
+        'link2_mcy': 0,
+        'link3_mcy': 0,
+        })
+    print(M[0, 0].simplify())
     #print sys.state_derivatives
 
 """
